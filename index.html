@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f6f1e8">
+  <title>Sorteio de nomes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="page-shell">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Sorteio de nomes">
+        <span class="brand-mark" aria-hidden="true">✦</span>
+        <span>Sorteio<span class="brand-dot">.</span></span>
+      </a>
+      <span class="topbar-note">simples, justo e instantâneo</span>
+    </header>
+
+    <section class="intro" aria-labelledby="page-title">
+      <p class="eyebrow">Escolha ao acaso</p>
+      <h1 id="page-title">Quem será o<br><em>sortudo?</em></h1>
+      <p class="intro-copy">Cole os nomes abaixo, um por linha.<br>O próximo escolhido está a um clique.</p>
+    </section>
+
+    <section class="app-grid" aria-label="Sorteador">
+      <div class="names-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="panel-kicker">Sua lista</p>
+            <h2>Nomes participantes</h2>
+          </div>
+          <span class="count-badge" id="nameCount">0 nomes</span>
+        </div>
+        <div class="quantity-control">
+          <label for="quantityInput">Quantidade por sorteio</label>
+          <input id="quantityInput" type="number" min="1" value="1" inputmode="numeric">
+        </div>
+        <label class="sr-only" for="namesInput">Digite os nomes, um por linha</label>
+        <textarea id="namesInput" placeholder="Ana Silva&#10;Bruno Costa&#10;Carla Mendes&#10;..." spellcheck="false"></textarea>
+        <div class="input-footer">
+          <span class="input-hint"><span class="hint-dot"></span> um nome por linha</span>
+          <button class="clear-button" id="clearButton" type="button">Limpar lista</button>
+        </div>
+      </div>
+
+      <div class="draw-panel" aria-live="polite">
+        <div class="draw-label"><span class="sparkle">✦</span> Resultado</div>
+        <div class="result-area" id="resultArea">
+          <div class="result-placeholder" id="resultPlaceholder">
+            <span class="placeholder-icon" aria-hidden="true">↗</span>
+            <p>O nome sorteado<br>aparecerá aqui</p>
+          </div>
+          <div class="result-name" id="resultName" hidden></div>
+          <p class="result-caption" id="resultCaption" hidden>foi o nome escolhido</p>
+          <div class="result-navigation" id="resultNavigation" hidden>
+            <button class="navigation-button" id="previousButton" type="button" aria-label="Ganhador anterior">←</button>
+            <span class="result-counter" id="resultCounter">1 / 1</span>
+            <button class="navigation-button" id="nextButton" type="button" aria-label="Próximo ganhador">→</button>
+          </div>
+        </div>
+        <button class="draw-button" id="drawButton" type="button">
+          <span class="button-icon" aria-hidden="true">✦</span>
+          <span class="button-text">Sortear nome</span>
+          <span class="button-arrow" aria-hidden="true">→</span>
+        </button>
+        <button class="restart-button" id="restartButton" type="button" disabled>
+          <span aria-hidden="true">↻</span> Reiniciar sorteio
+        </button>
+        <p class="status-message" id="statusMessage" role="status"></p>
+      </div>
+    </section>
+
+    <footer class="footer-note"><span>◇</span> Cada nome tem a mesma chance</footer>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>
