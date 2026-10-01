@@ -14,6 +14,9 @@ const previousButton = document.querySelector('#previousButton');
 const nextButton = document.querySelector('#nextButton');
 const resultCounter = document.querySelector('#resultCounter');
 const statusMessage = document.querySelector('#statusMessage');
+const sheetUrlInput = document.querySelector('#sheetUrlInput');
+const importButton = document.querySelector('#importButton');
+const importHint = document.querySelector('#sheetHint');
 let countdownTimer = null;
 let currentWinners = [];
 let currentWinnerIndex = 0;
@@ -139,6 +142,157 @@ function drawName() {
   }, 1000);
 }
 
+function buildCsvUrl(link) {
+  let url;
+  try {
+    url = new URL(link.trim());
+  } catch {
+    return null;
+  }
+
+  if (!url.hostname.endsWith('docs.google.com') || !url.pathname.includes('/spreadsheets/')) {
+    return null;
+  }
+
+  // Planilha publicada na web: .../spreadsheets/d/e/<id>/pubhtml
+  if (url.pathname.includes('/spreadsheets/d/e/')) {
+    url.pathname = url.pathname.replace(/\/pubhtml$/, '/pub');
+    url.searchParams.set('output', 'csv');
+    return url.toString();
+  }
+
+  // Planilha compartilhada por link: .../spreadsheets/d/<id>/edit#gid=0
+  const match = url.pathname.match(/\/spreadsheets\/d\/([\w-]+)/);
+  if (!match) return null;
+  const gid = url.searchParams.get('gid') || (url.hash.match(/gid=(\d+)/) || [])[1];
+  const csvUrl = new URL(`https://docs.google.com/spreadsheets/d/${match[1]}/gviz/tq`);
+  csvUrl.searchParams.set('tqx', 'out:csv');
+  if (gid) csvUrl.searchParams.set('gid', gid);
+  return csvUrl.toString();
+}
+
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let field = '';
+  let inQuotes = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+
+    if (inQuotes) {
+      if (char === '"' && text[index + 1] === '"') {
+        field += '"';
+        index += 1;
+      } else if (char === '"') {
+        inQuotes = false;
+      } else {
+        field += char;
+      }
+    } else if (char === '"') {
+      inQuotes = true;
+    } else if (char === ',') {
+      row.push(field);
+      field = '';
+    } else if (char === '\n' || char === '\r') {
+      if (char === '\r' && text[index + 1] === '\n') index += 1;
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = '';
+    } else {
+      field += char;
+    }
+  }
+
+  if (field || row.length) {
+    row.push(field);
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+function findNameColumn(headers) {
+  const index = headers.findIndex((header) => /\bnome|\bname/i.test(header));
+  if (index !== -1) return index;
+  // A primeira coluna do Forms é o "Carimbo de data/hora"
+  return headers.length > 1 ? 1 : 0;
+}
+
+function showImportMessage(message, type = '') {
+  importHint.textContent = message;
+  importHint.className = `import-hint ${type ? `is-${type}` : ''}`;
+}
+
+function addImportedNames(importedNames) {
+  const existing = new Set(getNames().map(normalizeName));
+  const newNames = importedNames.filter((name) => {
+    const key = normalizeName(name);
+    if (existing.has(key)) return false;
+    existing.add(key);
+    return true;
+  });
+
+  if (newNames.length) {
+    const current = namesInput.value.trim();
+    namesInput.value = current ? `${current}\n${newNames.join('\n')}` : newNames.join('\n');
+    resetDrawState();
+    updateCount();
+    showMessage('');
+  }
+
+  return newNames.length;
+}
+
+async function importFromSheet() {
+  const csvUrl = buildCsvUrl(sheetUrlInput.value);
+
+  if (!csvUrl) {
+    showImportMessage('Cole o link da planilha de respostas (docs.google.com/spreadsheets/...), não o link do formulário.', 'error');
+    sheetUrlInput.focus();
+    return;
+  }
+
+  importButton.disabled = true;
+  importButton.textContent = 'Importando...';
+
+  try {
+    const response = await fetch(csvUrl);
+    const text = await response.text();
+
+    if (!response.ok || text.trimStart().startsWith('<')) {
+      throw new Error('access');
+    }
+
+    const [headers = [], ...rows] = parseCsv(text);
+    const column = findNameColumn(headers);
+    const importedNames = rows.map((row) => (row[column] || '').trim()).filter(Boolean);
+
+    if (!importedNames.length) {
+      showImportMessage(`Nenhum nome encontrado na coluna "${headers[column] || '?'}".`, 'error');
+      return;
+    }
+
+    try {
+      localStorage.setItem('sheetUrl', sheetUrlInput.value.trim());
+    } catch {}
+
+    const added = addImportedNames(importedNames);
+    showImportMessage(
+      added
+        ? `${added} ${added === 1 ? 'nome novo importado' : 'nomes novos importados'} da coluna "${headers[column]}".`
+        : 'Nenhum nome novo: todos já estão na lista.',
+      'success',
+    );
+  } catch {
+    showImportMessage('Não foi possível ler a planilha. Verifique se ela está compartilhada como "Qualquer pessoa com o link".', 'error');
+  } finally {
+    importButton.disabled = false;
+    importButton.textContent = 'Importar';
+  }
+}
+
 previousButton.addEventListener('click', () => {
   if (currentWinnerIndex > 0) {
     currentWinnerIndex -= 1;
@@ -170,5 +324,14 @@ restartButton.addEventListener('click', () => {
   resetDrawState();
   showMessage('Sorteio reiniciado. Todos os nomes estão disponíveis novamente.');
 });
+importButton.addEventListener('click', importFromSheet);
+sheetUrlInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') importFromSheet();
+});
+
+try {
+  const savedUrl = localStorage.getItem('sheetUrl');
+  if (savedUrl) sheetUrlInput.value = savedUrl;
+} catch {}
 
 updateCount();

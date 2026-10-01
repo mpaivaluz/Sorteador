@@ -81,6 +81,18 @@ h2 { margin-bottom: 24px; font-family: Fraunces, Georgia, serif; font-size: 25px
 .quantity-control { display: flex; align-items: center; justify-content: space-between; margin: -8px 0 14px; color: var(--muted); font-size: 12px; }
 .quantity-control input { width: 64px; border: 1px solid var(--line); border-radius: 7px; outline: none; padding: 8px 9px; color: var(--ink); background: var(--panel); font-size: 14px; font-weight: 700; text-align: center; }
 .quantity-control input:focus { border-color: var(--coral); box-shadow: 0 0 0 3px rgba(239,111,88,.13); }
+.import-box { margin: 0 0 14px; border: 1px solid var(--line); border-radius: 10px; padding: 11px 14px; background: var(--panel); }
+.import-box summary { color: var(--ink); font-size: 13px; font-weight: 700; cursor: pointer; }
+.import-box summary::marker { color: var(--coral); }
+.import-row { display: flex; gap: 8px; margin-top: 12px; }
+.import-row input { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 7px; outline: none; padding: 9px 10px; color: var(--ink); background: #fff; font: inherit; font-size: 13px; }
+.import-row input:focus { border-color: var(--coral); box-shadow: 0 0 0 3px rgba(239,111,88,.13); }
+.import-button { flex: none; border: 0; border-radius: 7px; padding: 9px 14px; color: #fffdf8; background: var(--ink); font-size: 13px; font-weight: 700; }
+.import-button:hover { background: #38413b; }
+.import-button:disabled { cursor: wait; opacity: .6; }
+.import-hint { margin: 10px 0 2px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.import-hint.is-error { color: var(--coral-dark); }
+.import-hint.is-success { color: #3f7a5e; }
 textarea { width: 100%; min-height: 210px; flex: 1; resize: vertical; border: 1px solid var(--line); border-radius: 10px; outline: none; padding: 17px; color: var(--ink); background: var(--panel); font-size: 16px; line-height: 1.85; transition: border-color .2s, box-shadow .2s; }
 textarea:focus { border-color: var(--coral); box-shadow: 0 0 0 3px rgba(239,111,88,.13); }
 textarea::placeholder { color: #b4b2aa; }

@@ -39,6 +39,15 @@
           <label for="quantityInput">Quantidade por sorteio</label>
           <input id="quantityInput" type="number" min="1" value="1" inputmode="numeric">
         </div>
+        <details class="import-box" id="importBox">
+          <summary>Importar do Google Forms</summary>
+          <div class="import-row">
+            <label class="sr-only" for="sheetUrlInput">Link da planilha de respostas</label>
+            <input id="sheetUrlInput" type="url" placeholder="Cole o link da planilha de respostas" spellcheck="false">
+            <button class="import-button" id="importButton" type="button">Importar</button>
+          </div>
+          <p class="import-hint" id="sheetHint">No Forms, abra <strong>Respostas → Ver no Planilhas</strong> e compartilhe a planilha como <strong>"Qualquer pessoa com o link"</strong>. Importe de novo a qualquer momento para trazer novas respostas.</p>
+        </details>
         <label class="sr-only" for="namesInput">Digite os nomes, um por linha</label>
         <textarea id="namesInput" placeholder="Ana Silva&#10;Bruno Costa&#10;Carla Mendes&#10;..." spellcheck="false"></textarea>
         <div class="input-footer">
@@ -76,6 +85,5 @@
 
     <footer class="footer-note"><span>◇</span> Cada nome tem a mesma chance</footer>
   </main>
-  <script src="script.js"></script>
-</body>
+  <script src="script.js"></script></body>
 </html>
