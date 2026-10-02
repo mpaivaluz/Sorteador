@@ -1,8 +1,8 @@
-// Cadastro das palestras: uma por linha, no formato
-//   dia | hora | título | link da planilha de respostas
-// Use o link da planilha (Forms → Respostas → Ver no Planilhas), compartilhada
-// como "Qualquer pessoa com o link". Linhas começando com # são ignoradas.
-const PALESTRAS = `
- 02/10 | 08:00 | Principal  | https://docs.google.com/spreadsheets/d/18Qzbdt0X0fZEhz9oPBA7Knun0NRc76pp-JTxc3qx8V8/edit?usp=sharing
- 02/10 | 08:00 | Secundaria | https://docs.google.com/spreadsheets/d/18Qzbdt0X0fZEhz9oPBA7Knun0NRc76pp-JTxc3qx8V8/edit?usp=sharing
-`;
+// Link da planilha do Google com a lista de palestras.
+// A planilha deve ter as colunas: Dia | Hora | Título | Link
+//   Dia:    02/10
+//   Hora:   08:00
+//   Título: nome da palestra
+//   Link:   link da planilha de respostas do Forms daquela palestra
+// Compartilhe como "Qualquer pessoa com o link" (a planilha de palestras e as de respostas).
+const PLANILHA_PALESTRAS = 'https://docs.google.com/spreadsheets/d/1Y-xtpQAhuMTi1PdzXWo5e1QPOD2ESI2g3y54x0dL4_c/edit?usp=sharing';

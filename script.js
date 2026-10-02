@@ -16,16 +16,7 @@ const resultCounter = document.querySelector('#resultCounter');
 const statusMessage = document.querySelector('#statusMessage');
 const daySelect = document.querySelector('#daySelect');
 const talkSelect = document.querySelector('#talkSelect');
-const talkForm = document.querySelector('#talkForm');
-const talkDateInput = document.querySelector('#talkDate');
-const talkTimeInput = document.querySelector('#talkTime');
-const talkTitleInput = document.querySelector('#talkTitle');
-const talkLinkInput = document.querySelector('#talkLink');
-const talkFormHint = document.querySelector('#talkFormHint');
-const savedTalksList = document.querySelector('#savedTalks');
-const talkSubmitButton = document.querySelector('#talkSubmit');
-const talkCancelButton = document.querySelector('#talkCancel');
-let editingTalk = null;
+const reloadTalksButton = document.querySelector('#reloadTalksButton');
 const importButton = document.querySelector('#importButton');
 const importHint = document.querySelector('#sheetHint');
 let countdownTimer = null;
@@ -255,41 +246,23 @@ function addImportedNames(importedNames) {
   return newNames.length;
 }
 
-function parseTalks() {
-  const source = typeof PALESTRAS === 'string' ? PALESTRAS : '';
-
-  return source
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith('#'))
-    .map((line) => {
-      const [day = '', time = '', title = '', ...link] = line.split('|').map((part) => part.trim());
-      return { day, time, title, link: link.join('|') };
-    })
-    .filter((talk) => talk.day && talk.link);
-}
-
-// Palestras cadastradas pelo site ficam salvas só neste navegador
-function getSavedTalks() {
-  try {
-    const saved = JSON.parse(localStorage.getItem('savedTalks') || '[]');
-    return Array.isArray(saved) ? saved : [];
-  } catch {
-    return [];
-  }
-}
-
-function setSavedTalks(saved) {
-  try {
-    localStorage.setItem('savedTalks', JSON.stringify(saved));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 function talkKey(talk) {
   return [talk.day, talk.time, talk.title, talk.link].join('|');
+}
+
+function parseDay(value) {
+  const text = value.trim();
+  // Aceita "02/10", "2/10/2026" e "2026-10-02"
+  const iso = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  const [dayOfMonth, month] = iso ? [Number(iso[3]), Number(iso[2])] : text.split('/').map(Number);
+  if (!(dayOfMonth >= 1 && dayOfMonth <= 31 && month >= 1 && month <= 12)) return null;
+  return `${String(dayOfMonth).padStart(2, '0')}/${String(month).padStart(2, '0')}`;
+}
+
+function parseTime(value) {
+  const [hours, minutes = 0] = value.trim().split(/[:h]/).map(Number);
+  if (!(hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59)) return null;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
 function dayToNumber(day) {
@@ -298,60 +271,46 @@ function dayToNumber(day) {
 }
 
 function timeToMinutes(time) {
-  const [hours, minutes = 0] = time.split(/[:h]/).map(Number);
-  return Number.isFinite(hours) ? hours * 60 + (minutes || 0) : NaN;
+  const [hours, minutes = 0] = time.split(':').map(Number);
+  return hours * 60 + minutes;
 }
 
-// Palestras do arquivo removidas pelo site ficam ocultas neste navegador
-function getHiddenTalks() {
-  try {
-    const hidden = JSON.parse(localStorage.getItem('hiddenTalks') || '[]');
-    return Array.isArray(hidden) ? hidden : [];
-  } catch {
-    return [];
-  }
+function findColumn(headers, pattern, fallback) {
+  const index = headers.findIndex((header) => pattern.test(header.trim()));
+  return index === -1 ? fallback : index;
 }
 
-function discardTalk(talk) {
-  const key = talkKey(talk);
-  const saved = getSavedTalks();
-  const savedIndex = saved.findIndex((item) => talkKey(item) === key);
+async function fetchTalks() {
+  const sheetLink = typeof PLANILHA_PALESTRAS === 'string' ? PLANILHA_PALESTRAS : '';
+  const csvUrl = buildCsvUrl(sheetLink);
+  if (!csvUrl) throw new Error('config');
 
-  try {
-    if (savedIndex !== -1) {
-      saved.splice(savedIndex, 1);
-      localStorage.setItem('savedTalks', JSON.stringify(saved));
-    } else {
-      localStorage.setItem('hiddenTalks', JSON.stringify([...getHiddenTalks(), key]));
-    }
-  } catch {
-    return false;
-  }
+  const url = new URL(csvUrl);
+  if (url.pathname.endsWith('/gviz/tq')) url.searchParams.set('headers', '1');
+  const response = await fetch(url, { cache: 'no-store' });
+  const text = await response.text();
+  if (!response.ok || text.trimStart().startsWith('<')) throw new Error('access');
 
-  if (key === loadedTalk) loadedTalk = null;
-  return true;
-}
+  const [headers = [], ...rows] = parseCsv(text);
+  const dayColumn = findColumn(headers, /^(dia|data)/i, 0);
+  const timeColumn = findColumn(headers, /^(hora|horário|horario|início|inicio)/i, 1);
+  const titleColumn = findColumn(headers, /^(título|titulo|palestra|nome|tema)/i, 2);
+  const linkColumn = findColumn(headers, /^(link|planilha|url)/i, 3);
 
-function removeTalk(talk) {
-  if (!discardTalk(talk)) {
-    showTalkFormMessage('Não foi possível remover neste navegador.', 'error');
-    return;
-  }
-
-  if (editingTalk && talkKey(editingTalk) === talkKey(talk)) cancelEdit();
-  refreshTalks();
-}
-
-function loadTalks() {
-  const hidden = new Set(getHiddenTalks());
-  return [...parseTalks().filter((talk) => !hidden.has(talkKey(talk))), ...getSavedTalks()].sort(
-    (a, b) => dayToNumber(a.day) - dayToNumber(b.day)
+  return rows
+    .map((row) => ({
+      day: parseDay(row[dayColumn] || ''),
+      time: parseTime(row[timeColumn] || ''),
+      title: (row[titleColumn] || '').trim(),
+      link: (row[linkColumn] || '').trim(),
+    }))
+    .filter((talk) => talk.day && talk.time && talk.link)
+    .sort((a, b) => dayToNumber(a.day) - dayToNumber(b.day)
       || timeToMinutes(a.time) - timeToMinutes(b.time)
-      || a.title.localeCompare(b.title, 'pt-BR'),
-  );
+      || a.title.localeCompare(b.title, 'pt-BR'));
 }
 
-let talks = loadTalks();
+let talks = [];
 
 function selectedTalk() {
   return talkSelect.value === '' ? null : talks[Number(talkSelect.value)];
@@ -380,7 +339,7 @@ function selectCurrentTalk(days) {
   // Pré-seleciona o dia de hoje e a palestra que está acontecendo agora
   const now = new Date();
   const today = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const todayDay = days.find((day) => day.startsWith(today));
+  const todayDay = days.find((day) => day === today);
   daySelect.value = todayDay || days[0];
 
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
@@ -390,21 +349,42 @@ function selectCurrentTalk(days) {
   fillTalkSelect(todayDay && current ? current.index : undefined);
 }
 
-function refreshTalks(preferredKey) {
-  const previous = selectedTalk();
-  const keyToSelect = preferredKey || (previous && talkKey(previous));
-  talks = loadTalks();
-  daySelect.innerHTML = '';
-  renderSavedTalks();
+function setTalkControlsDisabled(disabled) {
+  daySelect.disabled = disabled;
+  talkSelect.disabled = disabled;
+  importButton.disabled = disabled;
+}
 
+async function refreshTalks() {
+  const previous = selectedTalk();
+  const keyToSelect = previous && talkKey(previous);
+  reloadTalksButton.disabled = true;
+  reloadTalksButton.textContent = 'Carregando...';
+
+  try {
+    talks = await fetchTalks();
+  } catch (error) {
+    talks = [];
+    showImportMessage(
+      error.message === 'config'
+        ? 'Coloque o link da planilha de palestras no arquivo palestras.js.'
+        : 'Não foi possível ler a planilha de palestras. Verifique se ela está compartilhada como "Qualquer pessoa com o link".',
+      'error',
+    );
+  } finally {
+    reloadTalksButton.disabled = false;
+    reloadTalksButton.textContent = '↻ Recarregar palestras';
+  }
+
+  daySelect.innerHTML = '';
+  talkSelect.innerHTML = '';
   const days = [...new Set(talks.map((talk) => talk.day))];
-  daySelect.disabled = !days.length;
-  talkSelect.disabled = !days.length;
-  importButton.disabled = !days.length;
+  setTalkControlsDisabled(!days.length);
 
   if (!days.length) {
-    talkSelect.innerHTML = '';
-    showImportMessage('Nenhuma palestra cadastrada. Use "Cadastrar palestras" abaixo ou o arquivo palestras.js.', 'error');
+    if (!importHint.classList.contains('is-error')) {
+      showImportMessage('Nenhuma palestra encontrada na planilha. Preencha as colunas Dia, Hora, Título e Link.', 'error');
+    }
     return;
   }
 
@@ -418,123 +398,7 @@ function refreshTalks(preferredKey) {
     fillTalkSelect(index);
   }
 
-  if (importHint.classList.contains('is-error')) {
-    showImportMessage('Escolha o dia e o horário. Clique em Atualizar a qualquer momento para trazer novas respostas.');
-  }
-}
-
-function renderSavedTalks() {
-  savedTalksList.innerHTML = '';
-
-  talks.forEach((talk) => {
-    const item = document.createElement('li');
-    const label = document.createElement('span');
-    label.textContent = `${talk.day} ${talk.time}${talk.title ? ` — ${talk.title}` : ''}`;
-    const removeButton = document.createElement('button');
-    removeButton.type = 'button';
-    removeButton.className = 'remove-talk';
-    removeButton.textContent = 'Remover';
-    removeButton.setAttribute('aria-label', `Remover ${label.textContent}`);
-    removeButton.addEventListener('click', () => {
-      if (window.confirm(`Remover a palestra ${label.textContent}?`)) removeTalk(talk);
-    });
-    const editButton = document.createElement('button');
-    editButton.type = 'button';
-    editButton.className = 'remove-talk edit-talk';
-    editButton.textContent = 'Editar';
-    editButton.setAttribute('aria-label', `Editar ${label.textContent}`);
-    editButton.addEventListener('click', () => startEdit(talk));
-    const actions = document.createElement('span');
-    actions.className = 'talk-actions';
-    actions.append(editButton, removeButton);
-    item.append(label, actions);
-    savedTalksList.append(item);
-  });
-}
-
-function showTalkFormMessage(message, type = '') {
-  talkFormHint.textContent = message;
-  talkFormHint.className = `import-hint ${type ? `is-${type}` : ''}`;
-}
-
-function startEdit(talk) {
-  editingTalk = talk;
-  talkDateInput.value = parseDay(talk.day) || talk.day;
-  talkTimeInput.value = parseTime(talk.time) || talk.time;
-  talkTitleInput.value = talk.title;
-  talkLinkInput.value = talk.link;
-  talkSubmitButton.textContent = 'Salvar alterações';
-  talkCancelButton.hidden = false;
-  showTalkFormMessage(`Editando ${talk.day} ${talk.time}${talk.title ? ` — ${talk.title}` : ''}.`);
-  talkLinkInput.focus();
-  talkLinkInput.select();
-}
-
-function cancelEdit() {
-  editingTalk = null;
-  talkForm.reset();
-  talkSubmitButton.textContent = 'Adicionar palestra';
-  talkCancelButton.hidden = true;
-  showTalkFormMessage('');
-}
-
-// Formata enquanto digita: "0310" vira "03/10", "0930" vira "09:30"
-function maskInput(input, separator) {
-  const digits = input.value.replace(/\D/g, '').slice(0, 4);
-  input.value = digits.length > 2 ? `${digits.slice(0, 2)}${separator}${digits.slice(2)}` : digits;
-}
-
-function parseDay(value) {
-  const [dayOfMonth, month] = value.split('/').map(Number);
-  if (!(dayOfMonth >= 1 && dayOfMonth <= 31 && month >= 1 && month <= 12)) return null;
-  return `${String(dayOfMonth).padStart(2, '0')}/${String(month).padStart(2, '0')}`;
-}
-
-function parseTime(value) {
-  const [hours, minutes = 0] = value.split(/[:h]/).map(Number);
-  if (!(hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59)) return null;
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-}
-
-function addTalk(event) {
-  event.preventDefault();
-  const day = parseDay(talkDateInput.value);
-  const time = parseTime(talkTimeInput.value);
-
-  if (!day) {
-    showTalkFormMessage('Informe o dia no formato dd/mm, por exemplo 03/10.', 'error');
-    talkDateInput.focus();
-    return;
-  }
-
-  if (!time) {
-    showTalkFormMessage('Informe a hora no formato hh:mm, por exemplo 09:30.', 'error');
-    talkTimeInput.focus();
-    return;
-  }
-
-  const talk = {
-    day,
-    time,
-    title: talkTitleInput.value.trim().replace(/\|/g, '/'),
-    link: talkLinkInput.value.trim(),
-  };
-
-  if (!buildCsvUrl(talk.link)) {
-    showTalkFormMessage('Use o link da planilha de respostas (docs.google.com/spreadsheets/...), não o link do formulário.', 'error');
-    talkLinkInput.focus();
-    return;
-  }
-
-  const wasEditing = Boolean(editingTalk);
-  if ((editingTalk && !discardTalk(editingTalk)) || !setSavedTalks([...getSavedTalks(), talk])) {
-    showTalkFormMessage('Não foi possível salvar neste navegador.', 'error');
-    return;
-  }
-
-  cancelEdit();
-  showTalkFormMessage(`Palestra de ${talk.day} às ${talk.time} ${wasEditing ? 'atualizada' : 'cadastrada'}.`, 'success');
-  refreshTalks(talkKey(talk));
+  showImportMessage(`${talks.length} ${talks.length === 1 ? 'palestra' : 'palestras'} na planilha. Escolha o dia e o horário e clique em Carregar.`);
 }
 
 async function importFromSheet() {
@@ -544,7 +408,7 @@ async function importFromSheet() {
   const csvUrl = buildCsvUrl(talk.link);
 
   if (!csvUrl) {
-    showImportMessage(`O link cadastrado para ${talk.day} ${talk.time} não é de uma planilha (docs.google.com/spreadsheets/...). Corrija o cadastro.`, 'error');
+    showImportMessage(`O link cadastrado para ${talk.day} ${talk.time} não é de uma planilha (docs.google.com/spreadsheets/...). Corrija na planilha de palestras e clique em Recarregar palestras.`, 'error');
     return;
   }
 
@@ -628,10 +492,7 @@ restartButton.addEventListener('click', () => {
 importButton.addEventListener('click', importFromSheet);
 daySelect.addEventListener('change', () => fillTalkSelect());
 talkSelect.addEventListener('change', updateImportButton);
-talkForm.addEventListener('submit', addTalk);
-talkCancelButton.addEventListener('click', cancelEdit);
-talkDateInput.addEventListener('input', () => maskInput(talkDateInput, '/'));
-talkTimeInput.addEventListener('input', () => maskInput(talkTimeInput, ':'));
+reloadTalksButton.addEventListener('click', refreshTalks);
 
 refreshTalks();
 updateCount();

@@ -48,24 +48,8 @@
             <select id="talkSelect"></select>
             <button class="import-button" id="importButton" type="button">Carregar</button>
           </div>
-          <p class="import-hint" id="sheetHint">Escolha o dia e o horário. Clique em <strong>Atualizar</strong> a qualquer momento para trazer novas respostas.</p>
-          <details class="manage-box">
-            <summary>Cadastrar palestras</summary>
-            <form class="talk-form" id="talkForm">
-              <label class="sr-only" for="talkDate">Dia</label>
-              <input id="talkDate" type="text" placeholder="Dia (dd/mm)" inputmode="numeric" maxlength="5" autocomplete="off" required>
-              <label class="sr-only" for="talkTime">Horário</label>
-              <input id="talkTime" type="text" placeholder="Hora (hh:mm)" inputmode="numeric" maxlength="5" autocomplete="off" required>
-              <label class="sr-only" for="talkTitle">Título</label>
-              <input id="talkTitle" class="talk-wide" type="text" placeholder="Título da palestra">
-              <label class="sr-only" for="talkLink">Link da planilha de respostas</label>
-              <input id="talkLink" class="talk-wide" type="url" placeholder="Link da planilha de respostas" spellcheck="false" required>
-              <button class="import-button talk-wide" id="talkSubmit" type="submit">Adicionar palestra</button>
-              <button class="clear-button talk-wide" id="talkCancel" type="button" hidden>Cancelar edição</button>
-            </form>
-            <p class="import-hint" id="talkFormHint">Fica salvo neste navegador. No Forms, use <strong>Respostas → Ver no Planilhas</strong> e compartilhe como <strong>"Qualquer pessoa com o link"</strong>.</p>
-            <ul class="saved-talks" id="savedTalks"></ul>
-          </details>
+          <p class="import-hint" id="sheetHint">Carregando palestras...</p>
+          <button class="clear-button reload-talks" id="reloadTalksButton" type="button">↻ Recarregar palestras</button>
         </div>
         <label class="sr-only" for="namesInput">Digite os nomes, um por linha</label>
         <textarea id="namesInput" placeholder="Ana Silva&#10;Bruno Costa&#10;Carla Mendes&#10;..." spellcheck="false"></textarea>
