@@ -39,15 +39,17 @@
           <label for="quantityInput">Quantidade por sorteio</label>
           <input id="quantityInput" type="number" min="1" value="1" inputmode="numeric">
         </div>
-        <details class="import-box" id="importBox">
-          <summary>Importar do Google Forms</summary>
+        <div class="import-box" id="importBox">
+          <p class="import-title">Palestra</p>
           <div class="import-row">
-            <label class="sr-only" for="sheetUrlInput">Link da planilha de respostas</label>
-            <input id="sheetUrlInput" type="url" placeholder="Cole o link da planilha de respostas" spellcheck="false">
-            <button class="import-button" id="importButton" type="button">Importar</button>
+            <label class="sr-only" for="daySelect">Dia</label>
+            <select id="daySelect" class="day-select"></select>
+            <label class="sr-only" for="talkSelect">Horário da palestra</label>
+            <select id="talkSelect"></select>
+            <button class="import-button" id="importButton" type="button">Carregar</button>
           </div>
-          <p class="import-hint" id="sheetHint">No Forms, abra <strong>Respostas → Ver no Planilhas</strong> e compartilhe a planilha como <strong>"Qualquer pessoa com o link"</strong>. Importe de novo a qualquer momento para trazer novas respostas.</p>
-        </details>
+          <p class="import-hint" id="sheetHint">Escolha o dia e o horário. Clique em <strong>Atualizar</strong> a qualquer momento para trazer novas respostas.</p>
+        </div>
         <label class="sr-only" for="namesInput">Digite os nomes, um por linha</label>
         <textarea id="namesInput" placeholder="Ana Silva&#10;Bruno Costa&#10;Carla Mendes&#10;..." spellcheck="false"></textarea>
         <div class="input-footer">
@@ -85,5 +87,6 @@
 
     <footer class="footer-note"><span>◇</span> Cada nome tem a mesma chance</footer>
   </main>
+  <script src="palestras.js"></script>
   <script src="script.js"></script></body>
 </html>

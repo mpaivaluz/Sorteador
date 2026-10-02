@@ -14,10 +14,12 @@ const previousButton = document.querySelector('#previousButton');
 const nextButton = document.querySelector('#nextButton');
 const resultCounter = document.querySelector('#resultCounter');
 const statusMessage = document.querySelector('#statusMessage');
-const sheetUrlInput = document.querySelector('#sheetUrlInput');
+const daySelect = document.querySelector('#daySelect');
+const talkSelect = document.querySelector('#talkSelect');
 const importButton = document.querySelector('#importButton');
 const importHint = document.querySelector('#sheetHint');
 let countdownTimer = null;
+let loadedTalk = null;
 let currentWinners = [];
 let currentWinnerIndex = 0;
 const drawnNames = new Set();
@@ -237,25 +239,92 @@ function addImportedNames(importedNames) {
   if (newNames.length) {
     const current = namesInput.value.trim();
     namesInput.value = current ? `${current}\n${newNames.join('\n')}` : newNames.join('\n');
-    resetDrawState();
     updateCount();
-    showMessage('');
   }
 
   return newNames.length;
 }
 
-async function importFromSheet() {
-  const csvUrl = buildCsvUrl(sheetUrlInput.value);
+function parseTalks() {
+  const source = typeof PALESTRAS === 'string' ? PALESTRAS : '';
 
-  if (!csvUrl) {
-    showImportMessage('Cole o link da planilha de respostas (docs.google.com/spreadsheets/...), não o link do formulário.', 'error');
-    sheetUrlInput.focus();
+  return source
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'))
+    .map((line) => {
+      const [day = '', time = '', title = '', ...link] = line.split('|').map((part) => part.trim());
+      return { day, time, title, link: link.join('|') };
+    })
+    .filter((talk) => talk.day && talk.link);
+}
+
+const talks = parseTalks();
+
+function talksOfDay(day) {
+  return talks.map((talk, index) => ({ ...talk, index })).filter((talk) => talk.day === day);
+}
+
+function updateImportButton() {
+  importButton.textContent = talkSelect.value !== '' && Number(talkSelect.value) === loadedTalk ? 'Atualizar' : 'Carregar';
+}
+
+function fillTalkSelect(preferredIndex) {
+  const dayTalks = talksOfDay(daySelect.value);
+  talkSelect.innerHTML = '';
+  dayTalks.forEach((talk) => {
+    talkSelect.add(new Option(talk.title ? `${talk.time} — ${talk.title}` : talk.time, talk.index));
+  });
+  if (dayTalks.some((talk) => talk.index === preferredIndex)) talkSelect.value = preferredIndex;
+  updateImportButton();
+}
+
+function timeToMinutes(time) {
+  const [hours, minutes = 0] = time.split(/[:h]/).map(Number);
+  return Number.isFinite(hours) ? hours * 60 + (minutes || 0) : NaN;
+}
+
+function setupTalkSelects() {
+  const days = [...new Set(talks.map((talk) => talk.day))];
+
+  if (!days.length) {
+    daySelect.disabled = true;
+    talkSelect.disabled = true;
+    importButton.disabled = true;
+    showImportMessage('Nenhuma palestra cadastrada. Adicione as palestras no arquivo palestras.js.', 'error');
     return;
   }
 
+  days.forEach((day) => daySelect.add(new Option(day, day)));
+
+  // Pré-seleciona o dia de hoje e a palestra que está acontecendo agora
+  const now = new Date();
+  const today = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const todayDay = days.find((day) => day.startsWith(today));
+  daySelect.value = todayDay || days[0];
+
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const current = talksOfDay(daySelect.value)
+    .filter((talk) => timeToMinutes(talk.time) <= nowMinutes)
+    .pop();
+  fillTalkSelect(todayDay && current ? current.index : undefined);
+}
+
+async function importFromSheet() {
+  if (talkSelect.value === '') return;
+
+  const talkIndex = Number(talkSelect.value);
+  const talk = talks[talkIndex];
+  const csvUrl = buildCsvUrl(talk.link);
+
+  if (!csvUrl) {
+    showImportMessage(`O link cadastrado para ${talk.day} ${talk.time} não é de uma planilha (docs.google.com/spreadsheets/...). Corrija em palestras.js.`, 'error');
+    return;
+  }
+
+  const isRefresh = talkIndex === loadedTalk;
   importButton.disabled = true;
-  importButton.textContent = 'Importando...';
+  importButton.textContent = isRefresh ? 'Atualizando...' : 'Carregando...';
 
   try {
     const response = await fetch(csvUrl);
@@ -269,27 +338,33 @@ async function importFromSheet() {
     const column = findNameColumn(headers);
     const importedNames = rows.map((row) => (row[column] || '').trim()).filter(Boolean);
 
+    if (!isRefresh) {
+      // Palestra nova: começa uma lista e um sorteio do zero
+      namesInput.value = '';
+      resetDrawState();
+      updateCount();
+      showMessage('');
+      loadedTalk = talkIndex;
+    }
+
     if (!importedNames.length) {
       showImportMessage(`Nenhum nome encontrado na coluna "${headers[column] || '?'}".`, 'error');
       return;
     }
 
-    try {
-      localStorage.setItem('sheetUrl', sheetUrlInput.value.trim());
-    } catch {}
-
     const added = addImportedNames(importedNames);
+    const label = talk.title || `${talk.day} ${talk.time}`;
     showImportMessage(
       added
-        ? `${added} ${added === 1 ? 'nome novo importado' : 'nomes novos importados'} da coluna "${headers[column]}".`
-        : 'Nenhum nome novo: todos já estão na lista.',
+        ? `${label}: ${added} ${added === 1 ? 'nome novo' : 'nomes novos'} da coluna "${headers[column]}".`
+        : `${label}: nenhum nome novo.`,
       'success',
     );
   } catch {
     showImportMessage('Não foi possível ler a planilha. Verifique se ela está compartilhada como "Qualquer pessoa com o link".', 'error');
   } finally {
     importButton.disabled = false;
-    importButton.textContent = 'Importar';
+    updateImportButton();
   }
 }
 
@@ -325,13 +400,8 @@ restartButton.addEventListener('click', () => {
   showMessage('Sorteio reiniciado. Todos os nomes estão disponíveis novamente.');
 });
 importButton.addEventListener('click', importFromSheet);
-sheetUrlInput.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter') importFromSheet();
-});
+daySelect.addEventListener('change', () => fillTalkSelect());
+talkSelect.addEventListener('change', updateImportButton);
 
-try {
-  const savedUrl = localStorage.getItem('sheetUrl');
-  if (savedUrl) sheetUrlInput.value = savedUrl;
-} catch {}
-
+setupTalkSelects();
 updateCount();
