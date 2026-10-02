@@ -18,6 +18,8 @@ const daySelect = document.querySelector('#daySelect');
 const talkSelect = document.querySelector('#talkSelect');
 const reloadTalksButton = document.querySelector('#reloadTalksButton');
 const importButton = document.querySelector('#importButton');
+const manualLinkInput = document.querySelector('#manualLinkInput');
+const manualImportButton = document.querySelector('#manualImportButton');
 const importHint = document.querySelector('#sheetHint');
 let countdownTimer = null;
 let loadedTalk = null;
@@ -401,20 +403,26 @@ async function refreshTalks() {
   showImportMessage(`${talks.length} ${talks.length === 1 ? 'palestra' : 'palestras'} na planilha. Escolha o dia e o horário e clique em Carregar.`);
 }
 
-async function importFromSheet() {
-  const talk = selectedTalk();
-  if (!talk) return;
+function updateManualButton() {
+  const link = manualLinkInput.value.trim();
+  manualImportButton.textContent = link && talkKey(manualTalk(link)) === loadedTalk ? 'Atualizar' : 'Importar';
+}
 
+function manualTalk(link) {
+  return { day: '', time: '', title: 'Link manual', link };
+}
+
+async function importTalk(talk, button, invalidLinkMessage) {
   const csvUrl = buildCsvUrl(talk.link);
 
   if (!csvUrl) {
-    showImportMessage(`O link cadastrado para ${talk.day} ${talk.time} não é de uma planilha (docs.google.com/spreadsheets/...). Corrija na planilha de palestras e clique em Recarregar palestras.`, 'error');
+    showImportMessage(invalidLinkMessage, 'error');
     return;
   }
 
   const isRefresh = talkKey(talk) === loadedTalk;
-  importButton.disabled = true;
-  importButton.textContent = isRefresh ? 'Atualizando...' : 'Carregando...';
+  button.disabled = true;
+  button.textContent = isRefresh ? 'Atualizando...' : 'Carregando...';
 
   try {
     const response = await fetch(csvUrl);
@@ -453,9 +461,32 @@ async function importFromSheet() {
   } catch {
     showImportMessage('Não foi possível ler a planilha. Verifique se ela está compartilhada como "Qualquer pessoa com o link".', 'error');
   } finally {
-    importButton.disabled = false;
+    button.disabled = false;
     updateImportButton();
+    updateManualButton();
   }
+}
+
+function importSelectedTalk() {
+  const talk = selectedTalk();
+  if (!talk) return;
+  importTalk(
+    talk,
+    importButton,
+    `O link cadastrado para ${talk.day} ${talk.time} não é de uma planilha (docs.google.com/spreadsheets/...). Corrija na planilha de palestras e clique em Recarregar palestras.`,
+  );
+}
+
+function importManualLink() {
+  const link = manualLinkInput.value.trim();
+  importTalk(
+    manualTalk(link),
+    manualImportButton,
+    'Cole o link da planilha de respostas (docs.google.com/spreadsheets/...), não o link do formulário.',
+  );
+  try {
+    localStorage.setItem('sheetUrl', link);
+  } catch {}
 }
 
 previousButton.addEventListener('click', () => {
@@ -489,7 +520,17 @@ restartButton.addEventListener('click', () => {
   resetDrawState();
   showMessage('Sorteio reiniciado. Todos os nomes estão disponíveis novamente.');
 });
-importButton.addEventListener('click', importFromSheet);
+importButton.addEventListener('click', importSelectedTalk);
+manualImportButton.addEventListener('click', importManualLink);
+manualLinkInput.addEventListener('input', updateManualButton);
+manualLinkInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') importManualLink();
+});
+
+try {
+  const savedUrl = localStorage.getItem('sheetUrl');
+  if (savedUrl) manualLinkInput.value = savedUrl;
+} catch {}
 daySelect.addEventListener('change', () => fillTalkSelect());
 talkSelect.addEventListener('change', updateImportButton);
 reloadTalksButton.addEventListener('click', refreshTalks);

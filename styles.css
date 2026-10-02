@@ -84,13 +84,17 @@ h2 { margin-bottom: 24px; font-family: Fraunces, Georgia, serif; font-size: 25px
 .import-box { margin: 0 0 14px; border: 1px solid var(--line); border-radius: 10px; padding: 11px 14px; background: var(--panel); }
 .import-title { margin: 0; color: var(--ink); font-size: 13px; font-weight: 700; }
 .import-row { display: flex; gap: 8px; margin-top: 12px; }
-.import-row select { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 7px; outline: none; padding: 9px 10px; color: var(--ink); background: #fff; font: inherit; font-size: 13px; }
+.import-row select, .import-row input { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 7px; outline: none; padding: 9px 10px; color: var(--ink); background: #fff; font: inherit; font-size: 13px; }
 .import-row select.day-select { flex: 0 0 auto; }
-.import-row select:focus { border-color: var(--coral); box-shadow: 0 0 0 3px rgba(239,111,88,.13); }
+.import-row select:focus, .import-row input:focus { border-color: var(--coral); box-shadow: 0 0 0 3px rgba(239,111,88,.13); }
 .import-button { flex: none; border: 0; border-radius: 7px; padding: 9px 14px; color: #fffdf8; background: var(--ink); font-size: 13px; font-weight: 700; }
 .import-button:hover { background: #38413b; }
 .import-button:disabled { cursor: wait; opacity: .6; }
 .import-box .reload-talks { margin-top: 6px; padding: 0; }
+.manual-box { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
+.manual-box summary { color: var(--ink); font-size: 12px; font-weight: 700; cursor: pointer; }
+.manual-box summary::marker { color: var(--coral); }
+.manual-box .import-row { margin-top: 10px; }
 .import-hint { margin: 10px 0 2px; color: var(--muted); font-size: 11px; line-height: 1.5; }
 .import-hint.is-error { color: var(--coral-dark); }
 .import-hint.is-success { color: #3f7a5e; }

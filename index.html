@@ -50,6 +50,14 @@
           </div>
           <p class="import-hint" id="sheetHint">Carregando palestras...</p>
           <button class="clear-button reload-talks" id="reloadTalksButton" type="button">↻ Recarregar palestras</button>
+          <details class="manual-box">
+            <summary>Usar outro link</summary>
+            <div class="import-row">
+              <label class="sr-only" for="manualLinkInput">Link da planilha de respostas</label>
+              <input id="manualLinkInput" type="url" placeholder="Cole o link da planilha de respostas" spellcheck="false">
+              <button class="import-button" id="manualImportButton" type="button">Importar</button>
+            </div>
+          </details>
         </div>
         <label class="sr-only" for="namesInput">Digite os nomes, um por linha</label>
         <textarea id="namesInput" placeholder="Ana Silva&#10;Bruno Costa&#10;Carla Mendes&#10;..." spellcheck="false"></textarea>
