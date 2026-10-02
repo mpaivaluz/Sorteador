@@ -53,9 +53,9 @@
             <summary>Cadastrar palestras</summary>
             <form class="talk-form" id="talkForm">
               <label class="sr-only" for="talkDate">Dia</label>
-              <input id="talkDate" type="date" required>
+              <input id="talkDate" type="text" placeholder="Dia (dd/mm)" inputmode="numeric" maxlength="5" autocomplete="off" required>
               <label class="sr-only" for="talkTime">Horário</label>
-              <input id="talkTime" type="time" required>
+              <input id="talkTime" type="text" placeholder="Hora (hh:mm)" inputmode="numeric" maxlength="5" autocomplete="off" required>
               <label class="sr-only" for="talkTitle">Título</label>
               <input id="talkTitle" class="talk-wide" type="text" placeholder="Título da palestra">
               <label class="sr-only" for="talkLink">Link da planilha de respostas</label>

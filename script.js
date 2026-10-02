@@ -345,7 +345,9 @@ function removeTalk(talk) {
 function loadTalks() {
   const hidden = new Set(getHiddenTalks());
   return [...parseTalks().filter((talk) => !hidden.has(talkKey(talk))), ...getSavedTalks()].sort(
-    (a, b) => dayToNumber(a.day) - dayToNumber(b.day) || timeToMinutes(a.time) - timeToMinutes(b.time),
+    (a, b) => dayToNumber(a.day) - dayToNumber(b.day)
+      || timeToMinutes(a.time) - timeToMinutes(b.time)
+      || a.title.localeCompare(b.title, 'pt-BR'),
   );
 }
 
@@ -457,10 +459,8 @@ function showTalkFormMessage(message, type = '') {
 
 function startEdit(talk) {
   editingTalk = talk;
-  const [dayOfMonth = '', month = ''] = talk.day.split('/');
-  const [hours = '', minutes = '00'] = talk.time.split(/[:h]/);
-  talkDateInput.value = `${new Date().getFullYear()}-${month.padStart(2, '0')}-${dayOfMonth.padStart(2, '0')}`;
-  talkTimeInput.value = `${hours.padStart(2, '0')}:${(minutes || '00').padStart(2, '0')}`;
+  talkDateInput.value = parseDay(talk.day) || talk.day;
+  talkTimeInput.value = parseTime(talk.time) || talk.time;
   talkTitleInput.value = talk.title;
   talkLinkInput.value = talk.link;
   talkSubmitButton.textContent = 'Salvar alterações';
@@ -478,12 +478,44 @@ function cancelEdit() {
   showTalkFormMessage('');
 }
 
+// Formata enquanto digita: "0310" vira "03/10", "0930" vira "09:30"
+function maskInput(input, separator) {
+  const digits = input.value.replace(/\D/g, '').slice(0, 4);
+  input.value = digits.length > 2 ? `${digits.slice(0, 2)}${separator}${digits.slice(2)}` : digits;
+}
+
+function parseDay(value) {
+  const [dayOfMonth, month] = value.split('/').map(Number);
+  if (!(dayOfMonth >= 1 && dayOfMonth <= 31 && month >= 1 && month <= 12)) return null;
+  return `${String(dayOfMonth).padStart(2, '0')}/${String(month).padStart(2, '0')}`;
+}
+
+function parseTime(value) {
+  const [hours, minutes = 0] = value.split(/[:h]/).map(Number);
+  if (!(hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59)) return null;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
+
 function addTalk(event) {
   event.preventDefault();
-  const [, month, dayOfMonth] = talkDateInput.value.split('-');
+  const day = parseDay(talkDateInput.value);
+  const time = parseTime(talkTimeInput.value);
+
+  if (!day) {
+    showTalkFormMessage('Informe o dia no formato dd/mm, por exemplo 03/10.', 'error');
+    talkDateInput.focus();
+    return;
+  }
+
+  if (!time) {
+    showTalkFormMessage('Informe a hora no formato hh:mm, por exemplo 09:30.', 'error');
+    talkTimeInput.focus();
+    return;
+  }
+
   const talk = {
-    day: `${dayOfMonth}/${month}`,
-    time: talkTimeInput.value,
+    day,
+    time,
     title: talkTitleInput.value.trim().replace(/\|/g, '/'),
     link: talkLinkInput.value.trim(),
   };
@@ -598,6 +630,8 @@ daySelect.addEventListener('change', () => fillTalkSelect());
 talkSelect.addEventListener('change', updateImportButton);
 talkForm.addEventListener('submit', addTalk);
 talkCancelButton.addEventListener('click', cancelEdit);
+talkDateInput.addEventListener('input', () => maskInput(talkDateInput, '/'));
+talkTimeInput.addEventListener('input', () => maskInput(talkTimeInput, ':'));
 
 refreshTalks();
 updateCount();
