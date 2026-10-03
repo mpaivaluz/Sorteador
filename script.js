@@ -21,6 +21,9 @@ const importButton = document.querySelector('#importButton');
 const manualLinkInput = document.querySelector('#manualLinkInput');
 const manualImportButton = document.querySelector('#manualImportButton');
 const importHint = document.querySelector('#sheetHint');
+const rangeStartInput = document.querySelector('#rangeStartInput');
+const rangeInput = document.querySelector('#rangeInput');
+const rangeButton = document.querySelector('#rangeButton');
 let countdownTimer = null;
 let loadedTalk = null;
 let currentWinners = [];
@@ -489,6 +492,36 @@ function importManualLink() {
   } catch {}
 }
 
+function fillNumberRange() {
+  const min = Number.parseInt(rangeStartInput.value, 10);
+  const max = Number.parseInt(rangeInput.value, 10);
+
+  if (!Number.isInteger(min)) {
+    showMessage('Informe o número inicial.');
+    rangeStartInput.focus();
+    return;
+  }
+
+  if (!Number.isInteger(max) || max < min) {
+    showMessage(`O número final deve ser maior ou igual a ${min}.`);
+    rangeInput.focus();
+    return;
+  }
+
+  const total = max - min + 1;
+  if (total > 100000 && !window.confirm(`Serão gerados ${total.toLocaleString('pt-BR')} números. Isso pode deixar a página lenta. Continuar?`)) {
+    return;
+  }
+
+  namesInput.value = Array.from({ length: total }, (_, index) => min + index).join('\n');
+  loadedTalk = null;
+  resetDrawState();
+  updateCount();
+  updateImportButton();
+  updateManualButton();
+  showMessage(`Números de ${min} a ${max} prontos para o sorteio.`);
+}
+
 previousButton.addEventListener('click', () => {
   if (currentWinnerIndex > 0) {
     currentWinnerIndex -= 1;
@@ -521,6 +554,10 @@ restartButton.addEventListener('click', () => {
   showMessage('Sorteio reiniciado. Todos os nomes estão disponíveis novamente.');
 });
 importButton.addEventListener('click', importSelectedTalk);
+rangeButton.addEventListener('click', fillNumberRange);
+[rangeStartInput, rangeInput].forEach((input) => input.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') fillNumberRange();
+}));
 manualImportButton.addEventListener('click', importManualLink);
 manualLinkInput.addEventListener('input', updateManualButton);
 manualLinkInput.addEventListener('keydown', (event) => {

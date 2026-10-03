@@ -39,6 +39,16 @@
           <label for="quantityInput">Quantidade por sorteio</label>
           <input id="quantityInput" type="number" min="1" value="1" inputmode="numeric">
         </div>
+        <div class="quantity-control number-range">
+          <span>Sortear números</span>
+          <span class="number-range-actions">
+            <label for="rangeStartInput">de</label>
+            <input id="rangeStartInput" type="number" value="1" inputmode="numeric">
+            <label for="rangeInput">até</label>
+            <input id="rangeInput" type="number" value="100" inputmode="numeric">
+            <button class="import-button" id="rangeButton" type="button">Gerar</button>
+          </span>
+        </div>
         <div class="import-box" id="importBox">
           <p class="import-title">Palestra</p>
           <div class="import-row">
